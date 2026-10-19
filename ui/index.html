@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FenDoc</title>
+<script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font-family: "Segoe UI", system-ui, sans-serif;
+    margin: 0; padding: 48px 24px; text-align: center;
+    background: #f3f4f6; color: #111827;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #111827; color: #f3f4f6; }
+    .card { background: #1f2937 !important; border-color: #374151 !important; }
+    button { background: #374151 !important; color: #f3f4f6 !important; }
+  }
+  .card {
+    max-width: 560px; margin: 0 auto; padding: 32px;
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.08);
+  }
+  h1 { margin: 0 0 8px; font-size: 28px; }
+  p { color: inherit; opacity: .75; }
+  #bridge-status { font-family: monospace; font-size: 13px; }
+  .row { display: flex; gap: 12px; justify-content: center; margin-top: 20px; }
+  button {
+    padding: 10px 20px; border: 0; border-radius: 8px; cursor: pointer;
+    background: #2563eb; color: #fff; font-size: 14px;
+  }
+  button:disabled { opacity: .4; cursor: default; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>📝 FenDoc</h1>
+  <p>Khung app PyQt6 + QWebEngineView chạy OK.<br>
+     Giao diện prototype (6 tab ribbon) sẽ được nạp vào đây.</p>
+  <p id="bridge-status">Đang nối bridge Python ↔ JS…</p>
+  <div class="row">
+    <button id="btn-save" disabled>Lưu thử (gọi Python)</button>
+    <button id="btn-open" disabled>Mở thử (gọi Python)</button>
+  </div>
+</div>
+<script>
+(function () {
+  var statusEl = document.getElementById('bridge-status');
+  function ready(info) {
+    statusEl.textContent = 'BRIDGE-OK name=' + info.name + ' v' + info.version + ' engine=' + info.engine;
+    document.getElementById('btn-save').disabled = false;
+    document.getElementById('btn-open').disabled = false;
+  }
+  window.__fendocSave = function () {
+    window.backend.saveFile(document.documentElement.outerHTML, function (res) {
+      var r = JSON.parse(res);
+      alert(r.ok ? 'Đã lưu: ' + r.path : 'Lưu: ' + r.reason);
+    });
+  };
+  window.__fendocOpen = function () {
+    window.backend.openFile(function (res) {
+      var r = JSON.parse(res);
+      alert(r.ok ? 'Đã đọc ' + r.html.length + ' ký tự từ: ' + r.path : 'Mở: ' + r.reason);
+    });
+  };
+  document.getElementById('btn-save').onclick = window.__fendocSave;
+  document.getElementById('btn-open').onclick = window.__fendocOpen;
+
+  if (typeof QWebChannel === 'undefined') {
+    statusEl.textContent = 'BRIDGE-FAIL: thieu qwebchannel.js (mo ngoai app?)';
+    return;
+  }
+  new QWebChannel(qt.webChannelTransport, function (ch) {
+    window.backend = ch.objects.backend;
+    window.backend.getAppInfo(function (res) { ready(JSON.parse(res)); });
+  });
+})();
+</script>
+</body>
+</html>
